@@ -11,5 +11,5 @@ type UserSignup struct {
 }
 
 type VerificationCodeInput struct {
-	Code string `json:"code`
+	Code string `json:"code"`
 }
