@@ -155,3 +155,7 @@ func (a Auth) GetCurrentUser(ctx *fiber.Ctx) domain.User {
 	user := ctx.Locals("user")
 	return user.(domain.User)
 }
+
+func (a Auth) GenerateCode() (string, error) {
+	return RandomHandler(6)
+}

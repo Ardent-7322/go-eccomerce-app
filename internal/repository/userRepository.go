@@ -14,7 +14,7 @@ type UserRepository interface {
 	CreateUser(usr domain.User) (domain.User, error)
 	FindUser(email string) (domain.User, error)
 	FindUserById(id uint) (domain.User, error)
-	UpdatedUser(id uint, u domain.User) (domain.User, error)
+	UpdateUser(id uint, u domain.User) (domain.User, error)
 }
 
 type userRepository struct {
@@ -63,7 +63,7 @@ func (r *userRepository) FindUserById(id uint) (domain.User, error) {
 }
 
 // ✔ matches interface: UpdatedUser(id uint, u domain.User)
-func (r *userRepository) UpdatedUser(id uint, u domain.User) (domain.User, error) {
+func (r *userRepository) UpdateUser(id uint, u domain.User) (domain.User, error) {
 	var user domain.User
 	if err := r.db.First(&user, id).Error; err != nil {
 		return domain.User{}, err
