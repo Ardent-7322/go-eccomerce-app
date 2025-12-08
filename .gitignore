@@ -1,0 +1,8 @@
+.env
+tmp/
+docker-data/
+docker-volume/
+# build files
+bin/
+dist/
+build/
