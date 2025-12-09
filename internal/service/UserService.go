@@ -14,10 +14,10 @@ import (
 )
 
 // UserService handles all business logic related to users
-type UserService struct {
-	UserRepo repository.UserRepository // DB operations for user
-	Auth     helper.Auth               // Auth tools: hashing, token, verify
-	Config   config.AppConfig
+type CatalogService struct {
+	CatalogRepo repository.CatalogRepository // DB operations for user
+	Auth        helper.Auth                  // Auth tools: hashing, token, verify
+	Config      config.AppConfig
 }
 
 // Signup creates a new user and returns a JWT
@@ -155,9 +155,40 @@ func (s UserService) GetProfile(id uint) (*domain.User, error) {
 func (s UserService) UpdateProfile(id uint, input any) error {
 	return nil
 }
-func (s UserService) BecomeSeller(id uint, input any) (string, error) {
+func (s UserService) BecomeSeller(id uint, input dto.SellerInput) (string, error) {
 
-	return "", nil
+	//find existing user
+	user, _ := s.UserRepo.FindUserById(id)
+
+	if user.UserType == domain.SELLER {
+		return "", errors.New("You are already a seller.")
+	}
+
+	// update user
+	seller, err := s.UserRepo.UpdateUser(id, domain.User{
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		Phone:     input.PhoneNumber,
+		UserType:  domain.SELLER,
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	// generating token
+	token, err := s.Auth.GenerateToken(user.ID, user.Email, seller.UserType)
+
+	// create bank account information
+
+	err = s.UserRepo.CreateBankAccount(domain.BankAccount{
+		BankAccount: input.BankAccountNumber,
+		SwiftCode:   input.SwiftCode,
+		PaymentType: input.PaymentType,
+		UserId:      id,
+	})
+
+	return token, err
 }
 func (s UserService) FindCart(id uint) ([]interface{}, error) {
 

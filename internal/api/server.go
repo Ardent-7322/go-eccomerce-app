@@ -1,15 +1,16 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"go-ecommerce-app/config"
 	"go-ecommerce-app/internal/api/rest"
 	"go-ecommerce-app/internal/api/rest/handlers"
 	"go-ecommerce-app/internal/domain"
 	"go-ecommerce-app/internal/helper"
+	"log"
+
+	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"log"
 )
 
 func StartServer(cfg config.AppConfig) {
@@ -21,8 +22,11 @@ func StartServer(cfg config.AppConfig) {
 	}
 	log.Println("Database connected")
 
-	db.AutoMigrate(&domain.User{})
-
+	err = db.AutoMigrate(&domain.User{}, &domain.BankAccount{})
+	if err != nil {
+		log.Fatal("error on running migration %v", err.Error())
+	}
+	log.Println("migration was successfull")
 	auth := helper.SetupAuth(cfg.AppSecret)
 
 	rh := &rest.RestHandler{
