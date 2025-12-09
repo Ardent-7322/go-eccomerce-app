@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"go-ecommerce-app/internal/api/rest"
 	"go-ecommerce-app/internal/dto"
 	"go-ecommerce-app/internal/repository"
@@ -23,6 +24,7 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	svc := service.UserService{
 		UserRepo: repository.NewUserRepository(rh.DB),
 		Auth:     rh.Auth,
+		Config:   rh.Config,
 	}
 	handler := UserHandler{
 		svc: svc,
@@ -97,20 +99,18 @@ func (h *UserHandler) login(ctx *fiber.Ctx) error {
 	})
 }
 func (h *UserHandler) GetverificationCode(ctx *fiber.Ctx) error {
-
 	user := h.svc.Auth.GetCurrentUser(ctx)
 
-	// create verifcation code and update to user profile in DB
-
-	code, err := h.svc.GetVerificationCode(user)
+	err := h.svc.GetVerificationCode(user)
 	if err != nil {
+		fmt.Println("GetVerificationCode error:", err) // 🔍 DEBUG
 		return ctx.Status(http.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "unable to generate verification code",
+			"message": err.Error(), // temporarily return real reason
 		})
 	}
+
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
 		"message": "GetverificationCode",
-		"data":    code,
 	})
 }
 func (h *UserHandler) verify(ctx *fiber.Ctx) error {

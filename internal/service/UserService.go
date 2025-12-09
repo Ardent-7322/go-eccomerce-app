@@ -2,10 +2,13 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"go-ecommerce-app/config"
 	"go-ecommerce-app/internal/domain"
 	"go-ecommerce-app/internal/dto"
 	"go-ecommerce-app/internal/helper"
 	"go-ecommerce-app/internal/repository"
+	"go-ecommerce-app/pkg/notification"
 	"log"
 	"time"
 )
@@ -14,6 +17,7 @@ import (
 type UserService struct {
 	UserRepo repository.UserRepository // DB operations for user
 	Auth     helper.Auth               // Auth tools: hashing, token, verify
+	Config   config.AppConfig
 }
 
 // Signup creates a new user and returns a JWT
@@ -74,36 +78,41 @@ func (s UserService) isVerifiedUser(id uint) bool {
 
 }
 
-func (s UserService) GetVerificationCode(e domain.User) (string, error) {
-
-	// if user already verified
-
+func (s UserService) GetVerificationCode(e domain.User) error {
+	// 1) Block already verified users (signup verification flow)
 	if s.isVerifiedUser(e.ID) {
-		return "", errors.New("user already verified")
+		return errors.New("user already verified")
 	}
 
-	// generate verifaction code
+	// 2) Generate verification code
 	code, err := s.Auth.GenerateCode()
 	if err != nil {
-		return "", err
+		return fmt.Errorf("failed to generate code: %w", err)
 	}
 
-	// Prepare updated user data
-	user := domain.User{
-		ID:     e.ID, // ← must include ID
-		Expiry: time.Now().Add(30 * time.Minute),
-		Code:   code,
+	// 3) Update user with code + expiry
+	e.Code = code
+	e.Expiry = time.Now().Add(30 * time.Minute)
+
+	if _, err := s.UserRepo.UpdateUser(e.ID, e); err != nil {
+		return fmt.Errorf("unable to update verification code: %w", err)
 	}
 
-	// Update in DB
-	_, err = s.UserRepo.UpdateUser(e.ID, user)
+	// 4) Re-fetch user to be sure we have fresh data (phone etc.)
+	dbUser, err := s.UserRepo.FindUserById(e.ID)
 	if err != nil {
-		return "", errors.New("unable to update verification code")
+		return fmt.Errorf("failed to fetch user after update: %w", err)
 	}
-	//send SMS
-	// return verification code
 
-	return code, nil
+	// 5) Send SMS
+	notificationClient := notification.NewNotificationClient(s.Config)
+
+	msg := fmt.Sprintf("Your verification code is %v", code)
+	if err := notificationClient.SendSMS(dbUser.Phone, msg); err != nil {
+		return fmt.Errorf("error sending sms: %w", err)
+	}
+
+	return nil
 }
 
 func (s UserService) VerifyCode(id uint, code string) error {

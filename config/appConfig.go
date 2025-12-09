@@ -8,28 +8,46 @@ import (
 )
 
 type AppConfig struct {
-	ServerPort string
-	Dsn        string // data source name
-	AppSecret  string
+	ServerPort            string
+	Dsn                   string
+	AppSecret             string
+	TwilioAccountSid      string
+	TwilioAuthToken       string
+	TwilioFromPhoneNumber string
 }
 
 func SetupEnv() (cfg AppConfig, err error) {
-	// Load .env (ignore error because file may not exist in production)
+
+	// Load .env (ignore errors, because in production env variables come from the OS)
 	_ = godotenv.Load(".env")
 
-	cfg.ServerPort = os.Getenv("HTTP_PORT")
+	cfg = AppConfig{
+		ServerPort:            os.Getenv("HTTP_PORT"),
+		Dsn:                   os.Getenv("DSN"),
+		AppSecret:             os.Getenv("APP_SECRET"),
+		TwilioAccountSid:      os.Getenv("TWILIO_ACCOUNT_SID"),
+		TwilioAuthToken:       os.Getenv("TWILIO_AUTH_TOKEN"),
+		TwilioFromPhoneNumber: os.Getenv("TWILIO_FROM_PHONE_NUMBER"),
+	}
+
+	// Validate required variables
 	if cfg.ServerPort == "" {
-		return cfg, errors.New("HTTP_PORT not found")
+		return cfg, errors.New("environment variable HTTP_PORT is missing")
 	}
-
-	cfg.Dsn = os.Getenv("DSN")
 	if cfg.Dsn == "" {
-		return cfg, errors.New("DSN not found")
+		return cfg, errors.New("environment variable DSN is missing")
 	}
-
-	cfg.AppSecret = os.Getenv("APP_SECRET")
 	if cfg.AppSecret == "" {
-		return cfg, errors.New("APP_SECRET not found")
+		return cfg, errors.New("environment variable APP_SECRET is missing")
+	}
+	if cfg.TwilioAccountSid == "" {
+		return cfg, errors.New("environment variable TWILIO_ACCOUNT_SID is missing")
+	}
+	if cfg.TwilioAuthToken == "" {
+		return cfg, errors.New("environment variable TWILIO_AUTH_TOKEN is missing")
+	}
+	if cfg.TwilioFromPhoneNumber == "" {
+		return cfg, errors.New("environment variable TWILIO_FROM_PHONE_NUMBER is missing")
 	}
 
 	return cfg, nil
