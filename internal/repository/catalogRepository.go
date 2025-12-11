@@ -14,10 +14,69 @@ type CatalogRepository interface {
 	FindCategoryById(id int) (*domain.Category, error)
 	EditCategory(e *domain.Category) (*domain.Category, error)
 	DeleteCategory(id int) error
+
+	CreateProduct(e *domain.Product) error
+	FindProducts() ([]*domain.Product, error)
+	FindProductById(id int) (*domain.Product, error) // fixed
+	FindSellerProducts(id int) ([]*domain.Product, error)
+	EditProduct(e *domain.Product) (*domain.Product, error) // fixed
+	DeleteProduct(e *domain.Product) error
 }
 
 type catalogRepository struct {
 	db *gorm.DB
+}
+
+func (c catalogRepository) CreateProduct(e *domain.Product) error {
+	err := c.db.Model(&domain.Product{}).Create(e).Error
+	if err != nil {
+		log.Printf("err: %v", err)
+		return errors.New("cannot create product")
+	}
+	return nil
+}
+
+func (c catalogRepository) FindProducts() ([]*domain.Product, error) {
+	var products []*domain.Product
+	err := c.db.Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
+func (c catalogRepository) FindProductById(id int) (*domain.Product, error) {
+	var product *domain.Product
+	err := c.db.First(&product, id).Error
+	if err != nil {
+		log.Printf("err: %v", err)
+		return nil, errors.New("  product does not exist")
+	}
+	return product, nil
+
+}
+func (c catalogRepository) FindSellerProducts(id int) ([]*domain.Product, error) {
+	var products []*domain.Product
+	err := c.db.First("user_id=?", id).Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+func (c catalogRepository) EditProduct(e *domain.Product) (*domain.Product, error) {
+	err := c.db.Save(&e).Error
+	if err != nil {
+		log.Printf("db_err: %v", err)
+		return nil, errors.New("Failed to update produc")
+	}
+	return e, nil
+}
+func (c catalogRepository) DeleteProduct(e *domain.Product) error {
+	err := c.db.Delete(&domain.Product{}, e.ID).Error
+	if err != nil {
+		return errors.New("product cannot delete")
+	}
+	return nil
 }
 
 func (c catalogRepository) CreateCategory(e *domain.Category) error {

@@ -84,3 +84,113 @@ func (s CatalogService) GetCategory(id int) (*domain.Category, error) {
 	}
 	return cat, nil
 }
+
+func (s CatalogService) CreateProduct(input dto.CreateProductRequest, user domain.User) error {
+	err := s.CatalogRepo.CreateProduct(&domain.Product{
+		Name:        input.Name,
+		Description: input.Description,
+		Price:       input.Price,
+		CategoryId:  input.CategoryId,
+		UserId:      int(user.ID),
+		Stock:       int(input.Stock),
+	})
+	return err
+}
+
+func (s CatalogService) EditProduct(id int, input dto.CreateProductRequest, user domain.User) (*domain.Product, error) {
+
+	existProduct, err := s.CatalogRepo.FindProductById(id)
+
+	// verify product owner
+	if existProduct.UserId != int(user.ID) {
+		return nil, errors.New("you don't have manage rights of this product")
+	}
+
+	if err != nil {
+		return nil, errors.New("product does not exist")
+	}
+
+	if len(input.Name) > 0 {
+		existProduct.Name = input.Name
+	}
+
+	if len(input.Description) > 0 {
+		existProduct.Description = input.Description
+	}
+
+	if input.Price > 0 {
+		existProduct.Price = input.Price
+	}
+
+	if input.CategoryId > 0 {
+		existProduct.CategoryId = input.CategoryId
+	}
+
+	updatedProduct, err := s.CatalogRepo.EditProduct(existProduct)
+
+	return updatedProduct, err
+
+}
+
+func (s CatalogService) DeleteProduct(id int, user domain.User) error {
+	existProduct, err := s.CatalogRepo.FindProductById(id)
+	if err != nil {
+		return errors.New("product does not exist")
+	}
+
+	// verify product owner
+	if existProduct.UserId != int(user.ID) {
+		return errors.New("you don't have manage rights of this product")
+	}
+	err = s.CatalogRepo.DeleteProduct(existProduct)
+	if err != nil {
+		return errors.New("product cannot delete")
+	}
+
+	return nil
+}
+
+func (s CatalogService) GetProducts() ([]*domain.Product, error) {
+	products, err := s.CatalogRepo.FindProducts()
+	if err != nil {
+		return nil, errors.New("products do not exist")
+	}
+
+	return products, nil
+}
+
+func (s CatalogService) GetProductsById(id int) (*domain.Product, error) {
+	product, err := s.CatalogRepo.FindProductById(id)
+	if err != nil {
+		return nil, errors.New("products do not exist")
+	}
+
+	return product, nil
+}
+
+func (s CatalogService) GetSellerProducts(id int) ([]*domain.Product, error) {
+	products, err := s.CatalogRepo.FindSellerProducts(id)
+	if err != nil {
+		return nil, errors.New("products do not exist")
+	}
+
+	return products, nil
+}
+
+func (s CatalogService) UpdatedProductStock(e domain.Product) (*domain.Product, error) {
+	product, err := s.CatalogRepo.FindProductById(int(e.ID))
+	if err != nil {
+		return nil, errors.New("product not found")
+	}
+
+	// verify product owner
+	if product.UserId != e.UserId {
+		return nil, errors.New("you don't have manage rights of this product")
+	}
+	product.Stock = e.Stock
+	editProduct, err := s.CatalogRepo.EditProduct(product)
+	if err != nil {
+		return nil, err
+	}
+	return editProduct, nil
+}
