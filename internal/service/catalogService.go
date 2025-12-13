@@ -11,10 +11,11 @@ import (
 )
 
 // Catalog service handles all business logic related to users
-type UserService struct {
-	UserRepo repository.UserRepository // DB operations for user
-	Auth     helper.Auth               // Auth tools: hashing, token, verify
-	Config   config.AppConfig
+type CatalogService struct {
+	UserRepo    repository.UserRepository
+	CatalogRepo repository.CatalogRepository // DB operations for user
+	Auth        helper.Auth                  // Auth tools: hashing, token, verify
+	Config      config.AppConfig
 }
 
 func (s CatalogService) CreateCategory(input dto.CreateCategoryRequest) error {

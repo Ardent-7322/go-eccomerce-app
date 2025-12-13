@@ -14,9 +14,11 @@ import (
 )
 
 // UserService handles all business logic related to users
-type CatalogService struct {
-	CatalogRepo repository.CatalogRepository // DB operations for user
-	Auth        helper.Auth                  // Auth tools: hashing, token, verify
+
+type UserService struct {
+	UserRepo    repository.UserRepository // DB operations for user
+	CatalogRepo repository.CatalogRepository
+	Auth        helper.Auth // Auth tools: hashing, token, verify
 	Config      config.AppConfig
 }
 
@@ -190,13 +192,60 @@ func (s UserService) BecomeSeller(id uint, input dto.SellerInput) (string, error
 
 	return token, err
 }
-func (s UserService) FindCart(id uint) ([]interface{}, error) {
+func (s UserService) FindCart(id uint) ([]any, error) {
 
 	return nil, nil
 }
-func (s UserService) CreateCart(input any, u domain.User) ([]interface{}, error) {
+func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]domain.Cart, error) {
+	// check if the cart is Exist
 
-	return nil, nil
+	cart, _ := s.UserRepo.FindCartItem(u.ID, input.ProductId)
+
+	if cart.ID > 0 {
+		if input.ProductId == 0 {
+			return nil, errors.New("Please provide a valid product id")
+		}
+		// -> delete the cart item
+		if input.Qty < 1 {
+			err := s.UserRepo.DeleteCartById(cart.ID)
+			if err != nil {
+				log.Printf("Error on deleting cart item %v", err)
+				return nil, errors.New("error on deleting cart item")
+			}
+
+		} else {
+			// => update the cart item
+			cart.Qty = input.Qty
+			err := s.UserRepo.UpdateCart(cart)
+			if err != nil {
+				//log error
+				return nil, errors.New("error on updating cart item")
+			}
+		}
+
+	} else {
+		// check if product exists
+		product, _ := s.CatalogRepo.FindProductById(int(input.ProductId))
+		if product.ID > 0 {
+			return nil, errors.New("product not found")
+		}
+
+		// create cart
+		err := s.UserRepo.CreateCart(domain.Cart{
+			UserId:    u.ID,
+			ProductId: input.ProductId,
+			Name:      product.Name,
+			ImageUrl:  product.ImageUrl,
+			Qty:       input.Qty,
+			Price:     product.Price,
+			SellerId:  uint(product.UserId),
+		})
+		if err != nil {
+			return nil, errors.New("error on creating cart item")
+		}
+	}
+
+	return s.UserRepo.FindCartItems(u.ID)
 }
 func (s UserService) CreateOrder(u domain.User) (int, error) {
 
