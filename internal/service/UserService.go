@@ -150,6 +150,10 @@ func (s UserService) VerifyCode(id uint, code string) error {
 	return nil
 }
 
+func (s UserService) CreateProfile(id uint, input any) error {
+
+	return nil
+}
 func (s UserService) GetProfile(id uint) (*domain.User, error) {
 
 	return nil, nil
@@ -192,9 +196,12 @@ func (s UserService) BecomeSeller(id uint, input dto.SellerInput) (string, error
 
 	return token, err
 }
-func (s UserService) FindCart(id uint) ([]any, error) {
+func (s UserService) FindCart(id uint) ([]domain.Cart, error) {
 
-	return nil, nil
+	cartItems, err := s.UserRepo.FindCartItems(id)
+	log.Printf("error %v", err)
+
+	return cartItems, nil
 }
 func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]domain.Cart, error) {
 	// check if the cart is Exist
@@ -226,7 +233,7 @@ func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]d
 	} else {
 		// check if product exists
 		product, _ := s.CatalogRepo.FindProductById(int(input.ProductId))
-		if product.ID > 0 {
+		if product.ID < 1 {
 			return nil, errors.New("product not found")
 		}
 
