@@ -6,6 +6,7 @@ import (
 	"go-ecommerce-app/internal/api/rest/handlers"
 	"go-ecommerce-app/internal/domain"
 	"go-ecommerce-app/internal/helper"
+	"go-ecommerce-app/pkg/payment"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -52,10 +53,14 @@ func StartServer(cfg config.AppConfig) {
 
 	auth := helper.SetupAuth(cfg.AppSecret)
 
+	paymentClient := payment.NewPaymentClient(cfg.StripeSecret, cfg.SuccessUrl, cfg.CancelUrl)
+
 	rh := &rest.RestHandler{
-		App: app,
-		DB:  db, Auth: auth,
+		App:    app,
+		DB:     db,
+		Auth:   auth,
 		Config: cfg, //  use cfg here
+		Pc:     paymentClient,
 	}
 	app.Use(func(c *fiber.Ctx) error {
 		origin := c.Get("Origin")
