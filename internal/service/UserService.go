@@ -10,6 +10,7 @@ import (
 	"go-ecommerce-app/internal/repository"
 	"go-ecommerce-app/pkg/notification"
 	"log"
+
 	"time"
 )
 
@@ -153,10 +154,20 @@ func (s UserService) VerifyCode(id uint, code string) error {
 func (s UserService) CreateProfile(id uint, input dto.ProfileInput) error {
 	// update user
 
-	_, err := s.UserRepo.UpdateUser(id, domain.User{
-		FirstName: input.FirstName,
-		LastName:  input.LastName,
-	})
+	user, err := s.UserRepo.FindUserById(id)
+
+	if err != nil {
+		return err
+	}
+
+	if input.FirstName != "" {
+		user.FirstName = input.FirstName
+	}
+	if input.LastName != "" {
+		user.LastName = input.LastName
+	}
+
+	_, err = s.UserRepo.UpdateUser(id, user)
 
 	if err != nil {
 		return err
@@ -315,6 +326,57 @@ func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]d
 	return s.UserRepo.FindCartItems(u.ID)
 }
 func (s UserService) CreateOrder(u domain.User) (int, error) {
+
+	// find cart items for the user
+	items, err := s.UserRepo.FindCartItems(u.ID)
+	if err != nil {
+		return 0, errors.New("error on finding cart items")
+	}
+
+	if len(items) == 0 {
+		return 0, errors.New("cart is empty cannot create the order")
+	}
+	// mock payment details
+	paymentId := "PAY12345"
+	txnId := "TXN12345"
+	orderRef, _ := helper.RandomHandler(8) // keep as string
+
+	// find success payment refrence status
+
+	var amount float64
+	orderItems := make([]domain.OrderItem, 0, len(items))
+
+	for _, item := range items {
+		amount += item.Price * float64(item.Qty)
+
+		orderItems = append(orderItems, domain.OrderItem{
+			ProductId: item.ProductId,
+			Qty:       item.Qty,
+			Price:     item.Price,
+			Name:      item.Name,
+			ImageUrl:  item.ImageUrl,
+			SellerId:  item.SellerId,
+		})
+	}
+
+	order := domain.Order{
+		UserId:         u.ID,
+		PaymentId:      paymentId,
+		TransactionId:  txnId,
+		OrderRefNumber: orderRef, // string
+		Amount:         amount,
+		Items:          orderItems,
+	}
+
+	if err := s.UserRepo.CreateOrder(order); err != nil {
+		return 0, err
+	}
+
+	// send email to user with order details
+
+	// remove cart items from the cart
+
+	// return order number
 
 	return 0, nil
 }

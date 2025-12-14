@@ -28,6 +28,11 @@ type UserRepository interface {
 	DeleteCartById(id uint) error
 	DeleteCartItems(uId uint) error
 
+	//order
+	CreateOrder(o domain.Order) error
+	FindOrders(uId uint) ([]domain.Order, error)
+	FindOrderById(id uint) (domain.Order, error)
+
 	//profile
 	CreateProfile(e domain.Address) error
 	UpdateProfile(e domain.Address) error
@@ -35,6 +40,21 @@ type UserRepository interface {
 
 type userRepository struct {
 	db *gorm.DB
+}
+
+// CreateOrder implements [UserRepository].
+func (r *userRepository) CreateOrder(o domain.Order) error {
+	panic("unimplemented")
+}
+
+// FindOrderById implements [UserRepository].
+func (r *userRepository) FindOrderById(id uint) (domain.Order, error) {
+	panic("unimplemented")
+}
+
+// FindOrders implements [UserRepository].
+func (r *userRepository) FindOrders(uId uint) ([]domain.Order, error) {
+	panic("unimplemented")
 }
 
 // CreateProfile implements [UserRepository].
