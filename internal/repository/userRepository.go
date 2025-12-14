@@ -179,7 +179,10 @@ func (r *userRepository) FindUser(email string) (domain.User, error) {
 // ✔ matches interface: FindUserById(id uint)
 func (r *userRepository) FindUserById(id uint) (domain.User, error) {
 	var user domain.User
-	err := r.db.Preload("Address").First(&user, id).Error
+	err := r.db.Preload("Address").
+		Preload("Cart").
+		Preload("Orders").
+		First(&user, id).Error
 
 	if err != nil {
 		log.Printf("find user error %v", err)
