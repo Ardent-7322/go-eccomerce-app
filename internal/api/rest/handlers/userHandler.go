@@ -9,6 +9,7 @@ import (
 	"go-ecommerce-app/internal/service"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -253,8 +254,29 @@ func (h *UserHandler) CreateOrder(ctx *fiber.Ctx) error {
 	})
 }
 func (h *UserHandler) GetOrders(ctx *fiber.Ctx) error {
+	user := h.svc.Auth.GetCurrentUser(ctx)
+
+	orders, err := h.svc.GetOrders(user)
+	if err != nil {
+		return rest.InternalError(ctx, err)
+	}
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
 		"message": "GetOrders",
+		"orders":  orders,
+	})
+}
+
+func (h *UserHandler) GetOrder(ctx *fiber.Ctx) error {
+	orderId, _ := strconv.Atoi(ctx.Params("id"))
+	user := h.svc.Auth.GetCurrentUser(ctx)
+
+	order, err := h.svc.GetOrderById(uint(orderId), user.ID)
+	if err != nil {
+		return rest.InternalError(ctx, err)
+	}
+	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
+		"message": "Get order by id",
+		"order":   order,
 	})
 }
 func (h *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {

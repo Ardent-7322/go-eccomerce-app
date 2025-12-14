@@ -10,6 +10,7 @@ import (
 	"go-ecommerce-app/internal/repository"
 	"go-ecommerce-app/pkg/notification"
 	"log"
+	"strconv"
 
 	"time"
 )
@@ -375,16 +376,33 @@ func (s UserService) CreateOrder(u domain.User) (int, error) {
 	// send email to user with order details
 
 	// remove cart items from the cart
+	err = s.UserRepo.DeleteCartItems(u.ID)
+	log.Printf("Deleting cart items Error %v", err)
 
 	// return order number
 
-	return 0, nil
-}
-func (s UserService) GetOrders(u domain.User) ([]interface{}, error) {
+	refInt, err := strconv.Atoi(orderRef)
+	if err != nil {
+		return 0, err
+	}
+	return refInt, nil
 
-	return nil, nil
 }
-func (s UserService) GetOrderById(id uint, uId uint) ([]interface{}, error) {
+func (s UserService) GetOrders(u domain.User) ([]domain.Order, error) {
+	orders, err := s.UserRepo.FindOrders(u.ID)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	return orders, nil
+}
+
+func (s UserService) GetOrderById(id uint, uId uint) (domain.Order, error) {
+
+	order, err := s.UserRepo.FindOrderById(id, uId)
+	if err != nil {
+		return domain.Order{}, err
+	}
+
+	return order, nil
 }

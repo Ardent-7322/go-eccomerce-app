@@ -31,7 +31,7 @@ type UserRepository interface {
 	//order
 	CreateOrder(o domain.Order) error
 	FindOrders(uId uint) ([]domain.Order, error)
-	FindOrderById(id uint) (domain.Order, error)
+	FindOrderById(id uint, uId uint) (domain.Order, error)
 
 	//profile
 	CreateProfile(e domain.Address) error
@@ -44,17 +44,40 @@ type userRepository struct {
 
 // CreateOrder implements [UserRepository].
 func (r *userRepository) CreateOrder(o domain.Order) error {
-	panic("unimplemented")
+	err := r.db.Create(&o).Error
+	if err != nil {
+		log.Printf("error on creating order %v", err)
+		return errors.New("failed to create order in database")
+	}
+
+	return nil
 }
 
 // FindOrderById implements [UserRepository].
-func (r *userRepository) FindOrderById(id uint) (domain.Order, error) {
-	panic("unimplemented")
+func (r *userRepository) FindOrderById(id uint, uId uint) (domain.Order, error) {
+
+	var order domain.Order
+	err := r.db.Preload("items").Where("id=? AND user_id=?").First(&order).Error
+	if err != nil {
+		log.Printf("error on fetching orders %v", err)
+		return domain.Order{}, errors.New("failed to fetch orders")
+
+	}
+
+	return order, nil
 }
 
 // FindOrders implements [UserRepository].
 func (r *userRepository) FindOrders(uId uint) ([]domain.Order, error) {
-	panic("unimplemented")
+	var orders []domain.Order
+	err := r.db.Where("user_id=?", uId).Find(&orders).Error
+	if err != nil {
+		log.Printf("error on fetching orders %v", err)
+		return nil, errors.New("failed to fetch orders")
+
+	}
+
+	return orders, nil
 }
 
 // CreateProfile implements [UserRepository].
