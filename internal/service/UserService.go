@@ -10,7 +10,6 @@ import (
 	"go-ecommerce-app/internal/repository"
 	"go-ecommerce-app/pkg/notification"
 	"log"
-	"strconv"
 
 	"time"
 )
@@ -335,21 +334,17 @@ func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]d
 
 	return s.UserRepo.FindCartItems(u.ID)
 }
-func (s UserService) CreateOrder(u domain.User) (int, error) {
+func (s UserService) CreateOrder(uId uint, orderRef string, pId string, amount float64) error {
 
 	// find cart items for the user
-	cartitems, amount, err := s.FindCart(u.ID)
+	cartitems, _, err := s.FindCart(uId)
 	if err != nil {
-		return 0, errors.New("error on finding cart items")
+		return errors.New("error on finding cart items")
 	}
 
 	if len(cartitems) == 0 {
-		return 0, errors.New("cart is empty cannot create the order")
+		return errors.New("cart is empty cannot create the order")
 	}
-	// mock payment details
-	paymentId := "PAY12345"
-	txnId := "TXN12345"
-	orderRef, _ := helper.RandomHandler(8) // keep as string
 
 	// find success payment refrence status
 
@@ -369,31 +364,26 @@ func (s UserService) CreateOrder(u domain.User) (int, error) {
 	}
 
 	order := domain.Order{
-		UserId:         u.ID,
-		PaymentId:      paymentId,
-		TransactionId:  txnId,
+		UserId:         uId,
+		PaymentId:      pId,
 		OrderRefNumber: orderRef, // string
 		Amount:         amount,
 		Items:          orderItems,
 	}
 
 	if err := s.UserRepo.CreateOrder(order); err != nil {
-		return 0, err
+		return err
 	}
 
 	// send email to user with order details
 
 	// remove cart items from the cart
-	err = s.UserRepo.DeleteCartItems(u.ID)
+	err = s.UserRepo.DeleteCartItems(uId)
 	log.Printf("Deleting cart items Error %v", err)
 
 	// return order number
 
-	refInt, err := strconv.Atoi(orderRef)
-	if err != nil {
-		return 0, err
-	}
-	return refInt, nil
+	return err
 
 }
 func (s UserService) GetOrders(u domain.User) ([]domain.Order, error) {

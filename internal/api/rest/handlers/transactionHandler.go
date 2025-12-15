@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
+	"go-ecommerce-app/config"
 	"go-ecommerce-app/internal/api/rest"
+	"go-ecommerce-app/internal/dto"
 	"go-ecommerce-app/internal/helper"
 	"go-ecommerce-app/internal/repository"
 	"go-ecommerce-app/internal/service"
@@ -14,9 +17,10 @@ import (
 )
 
 type TransactionHandler struct {
-	svc           *service.TransactionService
-	userSvc       service.UserService
-	paymentClient payment.PaymentClient
+	Svc           *service.TransactionService
+	UserSvc       service.UserService
+	PaymentClient payment.PaymentClient
+	Config        config.AppConfig
 }
 
 func initializeTransactionService(db *gorm.DB, auth helper.Auth) *service.TransactionService {
@@ -37,13 +41,15 @@ func SetupTransactionRoutes(as *rest.RestHandler) {
 		Config:      as.Config,
 	}
 	handler := TransactionHandler{
-		svc:           svc,
-		paymentClient: as.Pc,
-		userSvc:       useSvc,
+		Svc:           svc,
+		PaymentClient: as.Pc,
+		UserSvc:       useSvc,
+		Config:        as.Config,
 	}
 
-	secRoute := app.Group("/", as.Auth.Authorize)
+	secRoute := app.Group("/buyer", as.Auth.Authorize)
 	secRoute.Get("/payment", handler.MakePayment)
+	secRoute.Get("/verify", handler.VerifyPayment)
 
 	sellerRoute := app.Group("/seller", as.Auth.AuthorizeSeller)
 	sellerRoute.Get("/orders", handler.GetOrders)
@@ -51,7 +57,9 @@ func SetupTransactionRoutes(as *rest.RestHandler) {
 }
 func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 
-	user := h.svc.Auth.GetCurrentUser(ctx)
+	user := h.Svc.Auth.GetCurrentUser(ctx)
+
+	pubKey := h.Config.Pubkey
 	if user.ID == 0 {
 		return ctx.Status(http.StatusUnauthorized).JSON(&fiber.Map{
 			"message": "unauthenticated",
@@ -59,16 +67,17 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 	}
 
 	// 1. Check active payment
-	activePayment, err := h.svc.GetActivePayment(user.ID)
+	activePayment, err := h.Svc.GetActivePayment(user.ID)
 	if err == nil && activePayment.ID > 0 {
 		return ctx.Status(http.StatusOK).JSON(&fiber.Map{
-			"message":     "active payment exists",
-			"payment_url": activePayment.PaymentUrl,
+			"message": "active payment exists",
+			"pubKey":  pubKey,
+			"secret":  activePayment.ClientSecret,
 		})
 	}
 
 	// 2. Get cart total
-	_, amount, err := h.userSvc.FindCart(user.ID)
+	_, amount, err := h.UserSvc.FindCart(user.ID)
 	if err != nil {
 		return rest.BadRequestError(ctx, err.Error())
 	}
@@ -78,29 +87,67 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 	}
 
 	// 3. Generate order reference
-	orderRef, err := helper.RandomHandler(8)
+	orderId, err := helper.RandomHandler(8)
 	if err != nil {
 		return rest.InternalError(ctx, errors.New("error generating order reference"))
 	}
 
 	// 4. Create Stripe payment
-	sessionResult, err := h.paymentClient.CreatePayment(amount, user.ID, orderRef)
+	paymentResult, err := h.PaymentClient.CreatePayment(amount, user.ID, orderId)
 	if err != nil {
 		return rest.InternalError(ctx, err)
 	}
 
 	// 5. Store payment
-	err = h.svc.StoreCreatedPayment(user.ID, sessionResult, amount, orderRef)
+	err = h.Svc.StoreCreatedPayment(dto.CreatePaymentRequest{
+		UserId:       user.ID,
+		Amount:       amount,
+		ClientSecret: paymentResult.ClientSecret,
+		PaymentId:    paymentResult.ID,
+		OrderId:      orderId,
+	})
 	if err != nil {
 		return rest.InternalError(ctx, err)
 	}
 
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
-		"message":     "payment created",
-		"payment_url": sessionResult.URL,
+		"message": "create payment",
+		"pubKey":  pubKey,
+		"secret":  paymentResult.ClientSecret,
 	})
 }
 
+func (h *TransactionHandler) VerifyPayment(ctx *fiber.Ctx) error {
+
+	//grab authorized user
+	user := h.Svc.Auth.GetCurrentUser(ctx)
+
+	// do we have active payment session to verify?
+	activePayment, err := h.Svc.GetActivePayment(user.ID)
+	if err != nil || activePayment.ID == 0 {
+		return ctx.Status(400).JSON(errors.New("no active payment exist"))
+	}
+
+	// fetch payment status from stripe
+	paymentRes, err := h.PaymentClient.GetPaymentStatus(activePayment.PaymentId)
+	PaymentJson, _ := json.Marshal(paymentRes)
+	paymentLogs := string(PaymentJson)
+	paymentStatus := "failed"
+
+	// if payment then create order
+	if paymentRes.Status == "succeeded" {
+		// create Order
+		paymentStatus = "success"
+	}
+
+	// update payment status
+	h.Svc.UpdatePayment(user.ID, paymentStatus, paymentLogs)
+
+	return ctx.Status(200).JSON(&fiber.Map{
+		"message":  "create payment",
+		"response": paymentRes,
+	})
+}
 func (h *TransactionHandler) GetOrders(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON("success")
 }

@@ -33,13 +33,13 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 		svc: svc,
 	}
 	//Grouping kardenge
-	pubRoutes := app.Group("/users")
+	pubRoutes := app.Group("/")
 	//Public endpoints
 	pubRoutes.Post("/register", handler.Register)
 	pubRoutes.Post("/login", handler.login)
 
 	//Private routes ko grouping kardenge and can be accessible only by authorization
-	pvtRoutes := pubRoutes.Group("/", rh.Auth.Authorize)
+	pvtRoutes := pubRoutes.Group("/users", rh.Auth.Authorize)
 	//private endpoints
 	pvtRoutes.Get("/verify", handler.GetverificationCode)
 	pvtRoutes.Post("/verify", handler.verify)
@@ -50,7 +50,6 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	pvtRoutes.Post("/cart", handler.AddtoCart)
 	pvtRoutes.Get("/cart", handler.GetCart)
 
-	pvtRoutes.Post("/order", handler.CreateOrder)
 	pvtRoutes.Get("/order", handler.GetOrders)
 	pvtRoutes.Get("/order/:id", handler.GetOrders)
 
@@ -242,17 +241,6 @@ func (h *UserHandler) GetCart(ctx *fiber.Ctx) error {
 	})
 
 }
-func (h *UserHandler) CreateOrder(ctx *fiber.Ctx) error {
-	user := h.svc.Auth.GetCurrentUser(ctx)
-	orderRef, err := h.svc.CreateOrder(user)
-	if err != nil {
-		return rest.InternalError(ctx, errors.New("unable to create order"))
-	}
-	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
-		"message": "order created successfully",
-		"order":   orderRef,
-	})
-}
 func (h *UserHandler) GetOrders(ctx *fiber.Ctx) error {
 	user := h.svc.Auth.GetCurrentUser(ctx)
 
@@ -265,7 +253,6 @@ func (h *UserHandler) GetOrders(ctx *fiber.Ctx) error {
 		"orders":  orders,
 	})
 }
-
 func (h *UserHandler) GetOrder(ctx *fiber.Ctx) error {
 	orderId, _ := strconv.Atoi(ctx.Params("id"))
 	user := h.svc.Auth.GetCurrentUser(ctx)

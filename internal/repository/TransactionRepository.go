@@ -10,6 +10,7 @@ import (
 type TransactionRepository interface {
 	CreatePayment(payment *domain.Payment) error
 	FindInitialPayment(uId uint) (*domain.Payment, error)
+	UpdatePayment(payment *domain.Payment) error
 	FindOrders(uId uint) ([]domain.OrderItem, error)
 	FindOrderById(uId uint, id uint) (dto.SellerOrderDetails, error)
 }
@@ -18,11 +19,27 @@ type transactionStorage struct {
 	db *gorm.DB
 }
 
+// UpdatePayment implements [TransactionRepository].
+func (t *transactionStorage) UpdatePayment(payment *domain.Payment) error {
+	return t.db.Save(payment).Error
+}
+
 // FindPayment implements [TransactionRepository].
 func (t *transactionStorage) FindInitialPayment(uId uint) (*domain.Payment, error) {
-	var payment *domain.Payment
-	err := t.db.First(&payment, "user_id=? AND status=initial", uId).Order("created_at_desc").Error
-	return payment, err
+
+	var payment domain.Payment
+
+	err := t.db.
+		Where("user_id = ? AND status = ?", uId, domain.PaymentStatusInitial).
+		Order("created_at DESC").
+		First(&payment).
+		Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &payment, nil
 }
 
 // CreatePayment implements [TransactionRepository].
