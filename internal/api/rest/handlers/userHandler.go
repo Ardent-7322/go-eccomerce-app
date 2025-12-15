@@ -36,13 +36,13 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	pubRoutes := app.Group("/")
 	//Public endpoints
 	pubRoutes.Post("/register", handler.Register)
-	pubRoutes.Post("/login", handler.login)
+	pubRoutes.Post("/login", handler.Login)
 
 	//Private routes ko grouping kardenge and can be accessible only by authorization
 	pvtRoutes := pubRoutes.Group("/users", rh.Auth.Authorize)
 	//private endpoints
 	pvtRoutes.Get("/verify", handler.GetverificationCode)
-	pvtRoutes.Post("/verify", handler.verify)
+	pvtRoutes.Post("/verify", handler.Verify)
 	pvtRoutes.Post("/profile", handler.CreateProfile)
 	pvtRoutes.Get("/profile", handler.GetProfile)
 	pvtRoutes.Get("/profile", handler.UpdateProfile)
@@ -80,7 +80,7 @@ func (h *UserHandler) Register(ctx *fiber.Ctx) error {
 		"token":   token,
 	})
 }
-func (h *UserHandler) login(ctx *fiber.Ctx) error {
+func (h *UserHandler) Login(ctx *fiber.Ctx) error {
 
 	loginInput := dto.UserLogin{}
 	err := ctx.BodyParser(&loginInput)
@@ -118,7 +118,7 @@ func (h *UserHandler) GetverificationCode(ctx *fiber.Ctx) error {
 		"message": "GetverificationCode",
 	})
 }
-func (h *UserHandler) verify(ctx *fiber.Ctx) error {
+func (h *UserHandler) Verify(ctx *fiber.Ctx) error {
 
 	user := h.svc.Auth.GetCurrentUser(ctx)
 

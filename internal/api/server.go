@@ -88,13 +88,13 @@ func StartServer(cfg config.AppConfig) {
 
 func setupRoutes(rh *rest.RestHandler) {
 
+	//catalog
+	handlers.SetupCatalogRoutes(rh)
+
 	//user handlers
 	handlers.SetupUserRoutes(rh)
 
 	//transaction handlers
 	handlers.SetupTransactionRoutes(rh)
 
-	//catalog
-
-	handlers.SetupCatalogRoutes(rh)
 }

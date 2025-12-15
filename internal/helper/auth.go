@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"go-ecommerce-app/internal/domain"
 	"os"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
-
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,108 +22,96 @@ func NewAuth() Auth {
 		Secret: os.Getenv("APP_SECRET"),
 	}
 }
-func SetupAuth(s string) Auth {
+
+func SetupAuth(secret string) Auth {
 	return Auth{
-		Secret: s,
+		Secret: secret,
 	}
 }
 
-func (a Auth) CreateHashedPassword(password string) (string, error) {
+/* ================= PASSWORD ================= */
 
+func (a Auth) CreateHashedPassword(password string) (string, error) {
 	if len(password) < 6 {
-		return "", errors.New("password length should be atleast 6 characters long")
+		return "", errors.New("password length should be at least 6 characters")
 	}
 
-	hashP, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		// log actual error and report to logging tool
 		return "", errors.New("password hash failed")
 	}
 
-	return string(hashP), nil
+	return string(hash), nil
 }
+
+func (a Auth) VerifyPassword(plain string, hashed string) error {
+	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain)); err != nil {
+		return errors.New("password does not match")
+	}
+	return nil
+}
+
+/* ================= JWT ================= */
 
 func (a Auth) GenerateToken(id uint, email string, role string) (string, error) {
 	if id == 0 || email == "" || role == "" {
-		return "", errors.New("required inputs are missing to generate token")
+		return "", errors.New("invalid inputs for token generation")
 	}
 
 	if a.Secret == "" {
-		return "", errors.New("jwt secret is empty")
+		return "", errors.New("jwt secret is missing")
 	}
 
 	claims := jwt.MapClaims{
 		"user_id": id,
 		"email":   email,
 		"role":    role,
-		"exp":     time.Now().Add(30 * 24 * time.Hour).Unix(), // 30 days
+		"exp":     time.Now().Add(30 * 24 * time.Hour).Unix(),
 		"iat":     time.Now().Unix(),
 	}
 
-	// HS256 use karo, ES256 nahi
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	//  string nahi, []byte(secret) pass karo
 	tokenStr, err := token.SignedString([]byte(a.Secret))
 	if err != nil {
-		// yahan original err swallow mat karo
-		return "", fmt.Errorf("unable to sign the token: %w", err)
+		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
 	return tokenStr, nil
 }
 
-func (a Auth) VerifyPassword(plain_Password string, hashed_Password string) error {
-	if len(plain_Password) < 6 {
-		return errors.New("password length should be atleast 6 characters long")
-	}
-
-	err := bcrypt.CompareHashAndPassword([]byte(hashed_Password), []byte(plain_Password))
-
-	if err != nil {
-		return errors.New("Password does not match")
-	}
-	return nil
-
-}
-
 func (a Auth) VerifyToken(authHeader string) (domain.User, error) {
-	// Expected format: "Bearer <token>"
+	if authHeader == "" {
+		return domain.User{}, errors.New("authorization header missing")
+	}
+
 	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return domain.User{}, errors.New("invalid authorization header")
+		return domain.User{}, errors.New("invalid authorization header format")
 	}
 
 	tokenStr := parts[1]
 
 	parsedToken, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		// Ensure token is signed with HMAC (HS256/384/512)
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return []byte(a.Secret), nil
 	})
-	if err != nil {
+	if err != nil || !parsedToken.Valid {
 		return domain.User{}, errors.New("invalid token")
 	}
 
-	// Validate claims
 	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok || !parsedToken.Valid {
+	if !ok {
 		return domain.User{}, errors.New("invalid token claims")
 	}
 
-	// Expiry check
 	exp, ok := claims["exp"].(float64)
-	if !ok {
-		return domain.User{}, errors.New("invalid exp claim")
-	}
-	if time.Now().Unix() > int64(exp) {
-		return domain.User{}, errors.New("token is expired")
+	if !ok || time.Now().Unix() > int64(exp) {
+		return domain.User{}, errors.New("token expired")
 	}
 
-	// Build user from claims
 	user := domain.User{
 		ID:       uint(claims["user_id"].(float64)),
 		Email:    claims["email"].(string),
@@ -135,49 +121,57 @@ func (a Auth) VerifyToken(authHeader string) (domain.User, error) {
 	return user, nil
 }
 
+/* ================= MIDDLEWARE ================= */
+
 func (a Auth) Authorize(ctx *fiber.Ctx) error {
-
 	authHeader := ctx.Get("Authorization")
-	user, err := a.VerifyToken(authHeader)
 
-	if err == nil && user.ID > 0 {
-		ctx.Locals("user", user)
-		return ctx.Next()
-	} else {
-		return ctx.Status(401).JSON(&fiber.Map{
-			"message": "autherization failed",
-			"reason":  err,
+	user, err := a.VerifyToken(authHeader)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "authorization failed",
+			"reason":  err.Error(),
 		})
 	}
-}
 
-func (a Auth) GetCurrentUser(ctx *fiber.Ctx) domain.User {
-	user := ctx.Locals("user")
-	return user.(domain.User)
-}
-
-func (a Auth) GenerateCode() (string, error) {
-	return RandomHandler(6)
+	ctx.Locals("user", user)
+	return ctx.Next()
 }
 
 func (a Auth) AuthorizeSeller(ctx *fiber.Ctx) error {
-
 	authHeader := ctx.Get("Authorization")
+
 	user, err := a.VerifyToken(authHeader)
-
 	if err != nil {
-		return ctx.Status(401).JSON(&fiber.Map{
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
 			"message": "authorization failed",
-			"reason":  err,
-		})
-
-	} else if user.ID > 0 && user.UserType == domain.SELLER {
-		ctx.Locals("user", user)
-		return ctx.Next()
-	} else {
-		return ctx.Status(401).JSON(&fiber.Map{
-			"message": "authorization failed",
-			"reason":  errors.New("please join seller program to manage products"),
+			"reason":  err.Error(),
 		})
 	}
+
+	if user.UserType != domain.SELLER {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "authorization failed",
+			"reason":  "please join seller program to manage products",
+		})
+	}
+
+	ctx.Locals("user", user)
+	return ctx.Next()
+}
+
+/* ================= CONTEXT ================= */
+
+func (a Auth) GetCurrentUser(ctx *fiber.Ctx) domain.User {
+	user, ok := ctx.Locals("user").(domain.User)
+	if !ok {
+		return domain.User{}
+	}
+	return user
+}
+
+/* ================= OTP ================= */
+
+func (a Auth) GenerateCode() (string, error) {
+	return RandomHandler(6)
 }

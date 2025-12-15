@@ -60,17 +60,12 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 	user := h.Svc.Auth.GetCurrentUser(ctx)
 
 	pubKey := h.Config.Pubkey
-	if user.ID == 0 {
-		return ctx.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "unauthenticated",
-		})
-	}
 
 	// 1. Check active payment
 	activePayment, err := h.Svc.GetActivePayment(user.ID)
-	if err == nil && activePayment.ID > 0 {
+	if activePayment.ID > 0 {
 		return ctx.Status(http.StatusOK).JSON(&fiber.Map{
-			"message": "active payment exists",
+			"message": "create payment",
 			"pubKey":  pubKey,
 			"secret":  activePayment.ClientSecret,
 		})
@@ -78,27 +73,17 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 
 	// 2. Get cart total
 	_, amount, err := h.UserSvc.FindCart(user.ID)
-	if err != nil {
-		return rest.BadRequestError(ctx, err.Error())
-	}
-
-	if amount <= 0 {
-		return rest.BadRequestError(ctx, "cart is empty")
-	}
 
 	// 3. Generate order reference
 	orderId, err := helper.RandomHandler(8)
 	if err != nil {
-		return rest.InternalError(ctx, errors.New("error generating order reference"))
+		return rest.InternalError(ctx, errors.New("error generating order id"))
 	}
 
-	// 4. Create Stripe payment
+	// 4. Create a new payment session on stripe
 	paymentResult, err := h.PaymentClient.CreatePayment(amount, user.ID, orderId)
-	if err != nil {
-		return rest.InternalError(ctx, err)
-	}
 
-	// 5. Store payment
+	//5. Store payment session in db to create to store payment info
 	err = h.Svc.StoreCreatedPayment(dto.CreatePaymentRequest{
 		UserId:       user.ID,
 		Amount:       amount,
@@ -107,7 +92,7 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 		OrderId:      orderId,
 	})
 	if err != nil {
-		return rest.InternalError(ctx, err)
+		return ctx.Status(400).JSON(err)
 	}
 
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
@@ -138,6 +123,12 @@ func (h *TransactionHandler) VerifyPayment(ctx *fiber.Ctx) error {
 	if paymentRes.Status == "succeeded" {
 		// create Order
 		paymentStatus = "success"
+		err = h.UserSvc.CreateOrder(user.ID, activePayment.OrderId, activePayment.PaymentId, activePayment.Amount)
+
+	}
+
+	if err != nil {
+		return rest.InternalError(ctx, err)
 	}
 
 	// update payment status
