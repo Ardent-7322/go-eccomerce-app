@@ -12,7 +12,7 @@ import (
 )
 
 type PaymentClient interface {
-	CreatePayment(amount float64, userId uint, orderId uint) (*stripe.CheckoutSession, error)
+	CreatePayment(amount float64, userId uint, orderId string) (*stripe.CheckoutSession, error)
 	GetPaymentStatus(pId string) (*stripe.CheckoutSession, error)
 }
 
@@ -26,8 +26,10 @@ type payment struct {
 func (p *payment) CreatePayment(
 	amount float64,
 	userId uint,
-	orderId uint,
+	orderId string,
 ) (*stripe.CheckoutSession, error) {
+	// 🔑 THIS WAS MISSING
+	stripe.Key = p.stripeSecretKey
 
 	amountInCents := int64(math.Round(amount * 100))
 
@@ -37,7 +39,7 @@ func (p *payment) CreatePayment(
 			{
 				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
 					UnitAmount: stripe.Int64(amountInCents),
-					Currency:   stripe.String("inr"),
+					Currency:   stripe.String("usd"),
 					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
 						Name: stripe.String("Order Payment"),
 					},
@@ -50,7 +52,7 @@ func (p *payment) CreatePayment(
 		CancelURL:  stripe.String(p.cancelUrl),
 	}
 
-	params.AddMetadata("order_id", fmt.Sprintf("%d", orderId))
+	params.AddMetadata("order_id", fmt.Sprintf("%s", orderId))
 	params.AddMetadata("user_id", fmt.Sprintf("%d", userId))
 
 	session, err := checkoutsession.New(params)

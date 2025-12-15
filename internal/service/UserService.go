@@ -268,12 +268,21 @@ func (s UserService) BecomeSeller(id uint, input dto.SellerInput) (string, error
 
 	return token, err
 }
-func (s UserService) FindCart(id uint) ([]domain.Cart, error) {
+func (s UserService) FindCart(id uint) ([]domain.Cart, float64, error) {
 
 	cartItems, err := s.UserRepo.FindCartItems(id)
-	log.Printf("error %v", err)
 
-	return cartItems, nil
+	if err != nil {
+		return nil, 0, errors.New("error on finding cart items")
+	}
+
+	var totalAmount float64
+
+	for _, item := range cartItems {
+		totalAmount += item.Price * float64(item.Qty)
+	}
+
+	return cartItems, totalAmount, nil
 }
 func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]domain.Cart, error) {
 	// check if the cart is Exist
@@ -329,12 +338,12 @@ func (s UserService) CreateCart(input dto.CreateCartRequest, u domain.User) ([]d
 func (s UserService) CreateOrder(u domain.User) (int, error) {
 
 	// find cart items for the user
-	items, err := s.UserRepo.FindCartItems(u.ID)
+	cartitems, amount, err := s.FindCart(u.ID)
 	if err != nil {
 		return 0, errors.New("error on finding cart items")
 	}
 
-	if len(items) == 0 {
+	if len(cartitems) == 0 {
 		return 0, errors.New("cart is empty cannot create the order")
 	}
 	// mock payment details
@@ -344,10 +353,9 @@ func (s UserService) CreateOrder(u domain.User) (int, error) {
 
 	// find success payment refrence status
 
-	var amount float64
-	orderItems := make([]domain.OrderItem, 0, len(items))
+	orderItems := make([]domain.OrderItem, 0, len(cartitems))
 
-	for _, item := range items {
+	for _, item := range cartitems {
 		amount += item.Price * float64(item.Qty)
 
 		orderItems = append(orderItems, domain.OrderItem{

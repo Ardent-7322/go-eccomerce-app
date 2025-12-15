@@ -232,7 +232,7 @@ func (h *UserHandler) AddtoCart(ctx *fiber.Ctx) error {
 func (h *UserHandler) GetCart(ctx *fiber.Ctx) error {
 
 	user := h.svc.Auth.GetCurrentUser(ctx)
-	cart, err := h.svc.FindCart(user.ID)
+	cart, _, err := h.svc.FindCart(user.ID)
 	if err != nil {
 		return rest.InternalError(ctx, errors.New("cart does not exist"))
 	}
@@ -282,23 +282,28 @@ func (h *UserHandler) GetOrder(ctx *fiber.Ctx) error {
 func (h *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {
 
 	user := h.svc.Auth.GetCurrentUser(ctx)
+	if user.ID == 0 {
+		return ctx.Status(http.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "unauthenticated",
+		})
+	}
 
 	req := dto.SellerInput{}
-	err := ctx.BodyParser(&req)
-	if err != nil {
-		return ctx.Status(400).JSON(&fiber.Map{
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "request parameters are not valid",
 		})
 	}
 
 	token, err := h.svc.BecomeSeller(user.ID, req)
 	if err != nil {
-		return ctx.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "failed to become seller",
+		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": err.Error(),
 		})
 	}
+
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
-		"message": "become seller",
+		"message": "seller account created",
 		"token":   token,
 	})
 }

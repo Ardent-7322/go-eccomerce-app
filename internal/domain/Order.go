@@ -3,14 +3,14 @@ package domain
 import "time"
 
 type Order struct {
-	ID             uint        `json:"id" gorm:"PrimaryKey"`
+	ID             uint        `json:"id" gorm:"primaryKey"`
 	UserId         uint        `json:"user_id"`
 	Status         string      `json:"status"`
-	Amount         float64     `json:"amount" `
+	Amount         float64     `json:"amount"`
 	TransactionId  string      `json:"transaction_id"`
-	OrderRefNumber string      `gorm:"uniqueIndex;size:32"`
-	PaymentId      string      `json:"paymeny_id"`
+	OrderRefNumber string      `json:"order_ref_number" gorm:"uniqueIndex;size:32"`
+	PaymentId      string      `json:"payment_id"`
 	Items          []OrderItem `json:"items"`
-	CreatedAt      time.Time   `json:"created_at" gorm:"default:current_timestamp"`
-	UpdatedAt      time.Time   `json:"updated_at" gorm:"default:current_timestamp"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
 }
