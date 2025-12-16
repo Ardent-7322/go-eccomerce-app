@@ -59,7 +59,7 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 
 	user := h.Svc.Auth.GetCurrentUser(ctx)
 
-	pubKey := h.Config.Pubkey
+	pubKey := h.Config.PubKey
 
 	// 1. Check active payment
 	activePayment, err := h.Svc.GetActivePayment(user.ID)

@@ -17,8 +17,6 @@ type PaymentClient interface {
 
 type payment struct {
 	stripeSecretKey string
-	successUrl      string
-	cancelUrl       string
 }
 
 // CreatePayment implements [PaymentClient].
@@ -67,11 +65,9 @@ func (p *payment) GetPaymentStatus(pId string) (*stripe.PaymentIntent, error) {
 	return result, nil
 }
 
-func NewPaymentClient(stripeSecretKey, successUrl, cancelUrl string) PaymentClient {
+func NewPaymentClient(stripeSecretKey string) PaymentClient {
 	return &payment{
 		stripeSecretKey: stripeSecretKey,
-		successUrl:      successUrl,
-		cancelUrl:       cancelUrl,
 	}
 }
 

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -15,48 +15,23 @@ type AppConfig struct {
 	TwilioAuthToken       string
 	TwilioFromPhoneNumber string
 	StripeSecret          string
-	Pubkey                string
-	SuccessUrl            string
-	CancelUrl             string
+	PubKey                string
 }
 
 func SetupEnv() (cfg AppConfig, err error) {
 
-	// Load .env (ignore errors, because in production env variables come from the OS)
-	_ = godotenv.Load(".env")
+	// Always load .env in local/dev
+	_ = godotenv.Load()
 
-	cfg = AppConfig{
-		ServerPort:            os.Getenv("HTTP_PORT"),
-		Dsn:                   os.Getenv("DSN"),
-		AppSecret:             os.Getenv("APP_SECRET"),
+	httpPort := os.Getenv("SERVER_PORT")
+	Dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v", os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
+	appSecret := os.Getenv("APP_SECRET")
+
+	return AppConfig{ServerPort: httpPort, Dsn: Dsn, AppSecret: appSecret,
 		TwilioAccountSid:      os.Getenv("TWILIO_ACCOUNT_SID"),
 		TwilioAuthToken:       os.Getenv("TWILIO_AUTH_TOKEN"),
 		TwilioFromPhoneNumber: os.Getenv("TWILIO_FROM_PHONE_NUMBER"),
 		StripeSecret:          os.Getenv("STRIPE_SECRET"),
-		Pubkey:                os.Getenv("STRIPE_PUB_KEY"),
-		SuccessUrl:            os.Getenv("SUCCESS_URL"),
-		CancelUrl:             os.Getenv("CANCEL_URL"),
-	}
-
-	// Validate required variables
-	if cfg.ServerPort == "" {
-		return cfg, errors.New("environment variable HTTP_PORT is missing")
-	}
-	if cfg.Dsn == "" {
-		return cfg, errors.New("environment variable DSN is missing")
-	}
-	if cfg.AppSecret == "" {
-		return cfg, errors.New("environment variable APP_SECRET is missing")
-	}
-	if cfg.TwilioAccountSid == "" {
-		return cfg, errors.New("environment variable TWILIO_ACCOUNT_SID is missing")
-	}
-	if cfg.TwilioAuthToken == "" {
-		return cfg, errors.New("environment variable TWILIO_AUTH_TOKEN is missing")
-	}
-	if cfg.TwilioFromPhoneNumber == "" {
-		return cfg, errors.New("environment variable TWILIO_FROM_PHONE_NUMBER is missing")
-	}
-
-	return cfg, nil
+		PubKey:                os.Getenv("STRIPE_PUB_KEY"),
+	}, nil
 }

@@ -18,9 +18,15 @@ import (
 func StartServer(cfg config.AppConfig) {
 	app := fiber.New()
 
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
+
 	db, err := gorm.Open(postgres.Open(cfg.Dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("database connection error %v\n", err)
+		log.Printf("database connection error %v\n", err)
 	}
 	log.Println("Database connected")
 
@@ -36,7 +42,7 @@ func StartServer(cfg config.AppConfig) {
 		&domain.Payment{},
 	)
 	if err != nil {
-		log.Fatal("error on running migration %v", err.Error())
+		log.Print("error on running migration %v", err.Error())
 	}
 	log.Println("migration was successfull")
 
@@ -53,7 +59,7 @@ func StartServer(cfg config.AppConfig) {
 
 	auth := helper.SetupAuth(cfg.AppSecret)
 
-	paymentClient := payment.NewPaymentClient(cfg.StripeSecret, cfg.SuccessUrl, cfg.CancelUrl)
+	paymentClient := payment.NewPaymentClient(cfg.StripeSecret)
 
 	rh := &rest.RestHandler{
 		App:    app,
