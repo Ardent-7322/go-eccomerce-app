@@ -1,13 +1,14 @@
 package api
 
 import (
+	"log"
+
 	"go-ecommerce-app/config"
 	"go-ecommerce-app/internal/api/rest"
 	"go-ecommerce-app/internal/api/rest/handlers"
 	"go-ecommerce-app/internal/domain"
 	"go-ecommerce-app/internal/helper"
 	"go-ecommerce-app/pkg/payment"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -18,9 +19,13 @@ import (
 func StartServer(cfg config.AppConfig) {
 	app := fiber.New()
 
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
 	db, err := gorm.Open(postgres.Open(cfg.Dsn), &gorm.Config{})
 	if err != nil {
-		log.Printf("database connection error %v\n", err)
+		log.Fatalf("database connection failed: %v", err)
 	}
 	log.Println("Database connected")
 
@@ -36,13 +41,10 @@ func StartServer(cfg config.AppConfig) {
 		&domain.Payment{},
 	)
 	if err != nil {
-		log.Printf("error on running migration %v", err.Error())
+		log.Printf("migration error: %v", err)
 	}
-	log.Println("migration was successfull")
+	log.Println("Migration completed")
 
-	//cors configiration
-
-	// cors configuration - expanded for both localhost and 127.0.0.1 (dev only)
 	c := cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3030, http://127.0.0.1:3030",
 		AllowHeaders:     "Content-Type, Accept, Authorization",
@@ -52,22 +54,22 @@ func StartServer(cfg config.AppConfig) {
 	app.Use(c)
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return rest.SuccessResponse(c, "I am Healthy", &fiber.Map{
-			"status": "ok with 200 status code",
+		return rest.SuccessResponse(c, "Service is running", &fiber.Map{
+			"status": "ok",
 		})
 	})
 
 	auth := helper.SetupAuth(cfg.AppSecret)
-
 	paymentClient := payment.NewPaymentClient(cfg.StripeSecret)
 
 	rh := &rest.RestHandler{
 		App:    app,
 		DB:     db,
 		Auth:   auth,
-		Config: cfg, //  use cfg here
+		Config: cfg,
 		Pc:     paymentClient,
 	}
+
 	app.Use(func(c *fiber.Ctx) error {
 		origin := c.Get("Origin")
 		if origin != "" {
@@ -78,7 +80,6 @@ func StartServer(cfg config.AppConfig) {
 		}
 
 		if c.Method() == "OPTIONS" {
-			// return immediately for preflight
 			return c.SendStatus(fiber.StatusNoContent)
 		}
 
@@ -87,18 +88,18 @@ func StartServer(cfg config.AppConfig) {
 
 	setupRoutes(rh)
 
-	app.Listen(cfg.ServerPort)
+	port := cfg.ServerPort
+	if port == "" {
+		port = "8080"
+	}
+
+	if err := app.Listen(":" + port); err != nil {
+		log.Fatalf("failed to start server: %v", err)
+	}
 }
 
 func setupRoutes(rh *rest.RestHandler) {
-
-	//catalog
 	handlers.SetupCatalogRoutes(rh)
-
-	//user handlers
 	handlers.SetupUserRoutes(rh)
-
-	//transaction handlers
 	handlers.SetupTransactionRoutes(rh)
-
 }

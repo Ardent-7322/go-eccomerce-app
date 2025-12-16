@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"go-ecommerce-app/internal/domain"
 	"go-ecommerce-app/internal/dto"
 
@@ -49,12 +50,12 @@ func (t *transactionStorage) CreatePayment(payment *domain.Payment) error {
 
 // FindOrderById implements [TransactionRepository].
 func (t *transactionStorage) FindOrderById(uId uint, id uint) (dto.SellerOrderDetails, error) {
-	panic("unimplemented")
+	return dto.SellerOrderDetails{}, errors.New("FindOrderById not implemented")
 }
 
 // FindOrders implements [TransactionRepository].
 func (t *transactionStorage) FindOrders(uId uint) ([]domain.OrderItem, error) {
-	panic("unimplemented")
+	return []domain.OrderItem{}, nil
 }
 
 func NewTransactionRepository(db *gorm.DB) TransactionRepository {
