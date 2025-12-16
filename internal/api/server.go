@@ -18,12 +18,6 @@ import (
 func StartServer(cfg config.AppConfig) {
 	app := fiber.New()
 
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"status": "ok",
-		})
-	})
-
 	db, err := gorm.Open(postgres.Open(cfg.Dsn), &gorm.Config{})
 	if err != nil {
 		log.Printf("database connection error %v\n", err)
@@ -42,7 +36,7 @@ func StartServer(cfg config.AppConfig) {
 		&domain.Payment{},
 	)
 	if err != nil {
-		log.Print("error on running migration %v", err.Error())
+		log.Printf("error on running migration %v", err.Error())
 	}
 	log.Println("migration was successfull")
 
@@ -56,6 +50,12 @@ func StartServer(cfg config.AppConfig) {
 		AllowCredentials: true,
 	})
 	app.Use(c)
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return rest.SuccessResponse(c, "I am Healthy", &fiber.Map{
+			"status": "ok with 200 status code",
+		})
+	})
 
 	auth := helper.SetupAuth(cfg.AppSecret)
 
@@ -87,9 +87,7 @@ func StartServer(cfg config.AppConfig) {
 
 	setupRoutes(rh)
 
-	if err := app.Listen(":" + cfg.ServerPort); err != nil {
-		panic(err)
-	}
+	app.Listen(cfg.ServerPort)
 }
 
 func setupRoutes(rh *rest.RestHandler) {
