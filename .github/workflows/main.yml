@@ -26,13 +26,10 @@ jobs:
 
       - name: EB Init
         run: |
-          eb init go-ecommerce-app \
+          eb init Goecommerceapp \
             --platform "Docker" \
             --region eu-central-1
 
-      - name: Select Environment
-        run: |
-          eb use go-ecommerce-prod
 
       - name: Set Environment variables
         run: |
@@ -48,4 +45,4 @@ jobs:
 
       - name: Deploy on Elastic Beanstalk
         run: |
-          eb deploy
+          eb deploy Goecommerceapp-env
