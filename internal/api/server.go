@@ -21,7 +21,9 @@ func StartServer(cfg config.AppConfig) {
 	app := fiber.New()
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
+		return rest.SuccessResponse(c, "I am Healty", &fiber.Map{
+			"status": "ok with 200 status code",
+		})
 	})
 
 	db, err := gorm.Open(postgres.Open(cfg.Dsn), &gorm.Config{})
