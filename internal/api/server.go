@@ -20,17 +20,18 @@ import (
 func StartServer(cfg config.AppConfig) {
 	app := fiber.New()
 
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	db, err := gorm.Open(postgres.Open(cfg.Dsn), &gorm.Config{})
 	if err != nil {
 		log.Printf("database connection failed: %v", err)
+		return
 	}
 	log.Println("Database connected")
 
-	err = db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&domain.User{},
 		&domain.Address{},
 		&domain.BankAccount{},
@@ -40,25 +41,15 @@ func StartServer(cfg config.AppConfig) {
 		&domain.Order{},
 		&domain.OrderItem{},
 		&domain.Payment{},
-	)
-	if err != nil {
-		log.Printf("migration error: %v", err)
+	); err != nil {
+		log.Printf("migration failed: %v", err)
 	}
-	log.Println("Migration completed")
 
-	c := cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3030, http://127.0.0.1:3030",
-		AllowHeaders:     "Content-Type, Accept, Authorization",
-		AllowMethods:     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-		AllowCredentials: true,
-	})
-	app.Use(c)
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return rest.SuccessResponse(c, "Service is running", &fiber.Map{
-			"status": "ok",
-		})
-	})
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Content-Type, Accept, Authorization",
+		AllowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+	}))
 
 	auth := helper.SetupAuth(cfg.AppSecret)
 	paymentClient := payment.NewPaymentClient(cfg.StripeSecret)
@@ -71,25 +62,9 @@ func StartServer(cfg config.AppConfig) {
 		Pc:     paymentClient,
 	}
 
-	app.Use(func(c *fiber.Ctx) error {
-		origin := c.Get("Origin")
-		if origin != "" {
-			c.Set("Access-Control-Allow-Origin", origin)
-			c.Set("Access-Control-Allow-Credentials", "true")
-			c.Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
-			c.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		}
-
-		if c.Method() == "OPTIONS" {
-			return c.SendStatus(fiber.StatusNoContent)
-		}
-
-		return c.Next()
-	})
-
 	setupRoutes(rh)
 
-	port := os.Getenv("PORT") // EB provides this
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = cfg.ServerPort
 	}
@@ -98,7 +73,10 @@ func StartServer(cfg config.AppConfig) {
 	}
 
 	log.Println("Starting server on port", port)
-	log.Print(app.Listen(":" + port))
+
+	if err := app.Listen(":" + port); err != nil {
+		log.Printf("server stopped: %v", err)
+	}
 }
 
 func setupRoutes(rh *rest.RestHandler) {
