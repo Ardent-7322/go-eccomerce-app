@@ -32,4 +32,5 @@ jobs:
 
       - name: Deploy on Elastic Beanstalk
         run: |
-          eb deploy
+         eb deploy Goecommerceapp-env
+
