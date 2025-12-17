@@ -1,2 +1,2 @@
-build: go build -o application
+build: go build -o application .
 run: ./application
