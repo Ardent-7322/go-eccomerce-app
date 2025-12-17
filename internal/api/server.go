@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"os"
 
 	"go-ecommerce-app/config"
 	"go-ecommerce-app/internal/api/rest"
@@ -25,7 +26,7 @@ func StartServer(cfg config.AppConfig) {
 
 	db, err := gorm.Open(postgres.Open(cfg.Dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("database connection failed: %v", err)
+		log.Printf("database connection failed: %v", err)
 	}
 	log.Println("Database connected")
 
@@ -88,14 +89,16 @@ func StartServer(cfg config.AppConfig) {
 
 	setupRoutes(rh)
 
-	port := cfg.ServerPort
+	port := os.Getenv("PORT") // EB provides this
+	if port == "" {
+		port = cfg.ServerPort
+	}
 	if port == "" {
 		port = "8080"
 	}
 
-	if err := app.Listen(":" + port); err != nil {
-		log.Fatalf("failed to start server: %v", err)
-	}
+	log.Println("Starting server on port", port)
+	log.Print(app.Listen(":" + port))
 }
 
 func setupRoutes(rh *rest.RestHandler) {
