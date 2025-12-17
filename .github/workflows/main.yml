@@ -6,8 +6,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,13 +19,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS }}
           aws-region: eu-central-1
 
-      - name: ElasticBeanStalkCli
+      - name: Install EB CLI
         run: |
           pip install awsebcli --upgrade --user
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: EB Init
+        run: |
+          eb init go-ecommerce-app \
+            --platform "Docker" \
+            --region eu-central-1
+
+      - name: Select Environment
+        run: |
+          eb use go-ecommerce-prod
 
       - name: Set Environment variables
         run: |
-          eb setenv APP_ENV=prod SERVER_PORT=localhost:5000 APP_SECRET=${{ secrets.APP_SECRET }} DB_HOST=${{ secrets.DB_HOST }} DB_PORT=5432 DB_NAME=${{ secrets.DB_NAME }} DB_USER=${{ secrets.DB_USER }} DB_PASSWORD=${{secrets.DB_PASSWORD }}
+          eb setenv \
+            APP_ENV=prod \
+            SERVER_PORT=5000 \
+            APP_SECRET=${{ secrets.APP_SECRET }} \
+            DB_HOST=${{ secrets.DB_HOST }} \
+            DB_PORT=5432 \
+            DB_NAME=${{ secrets.DB_NAME }} \
+            DB_USER=${{ secrets.DB_USER }} \
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
 
       - name: Deploy on Elastic Beanstalk
         run: |
