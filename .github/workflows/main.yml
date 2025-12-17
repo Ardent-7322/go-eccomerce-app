@@ -17,7 +17,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS }}
-          aws-region: ap-south-1   # ✅ CORRECT REGION
+          aws-region: ap-south-1
 
       - name: Install EB CLI
         run: |
@@ -26,11 +26,10 @@ jobs:
 
       - name: EB Init
         run: |
-          eb init Goecommerceapp \
-            --platform "Docker" \
+          eb init go_ecommerce_app \
+            --platform "Go 1 running on 64bit Amazon Linux 2023" \
             --region ap-south-1
 
       - name: Deploy on Elastic Beanstalk
         run: |
-         eb deploy Goecommerceapp-env
-
+          eb deploy Goecommerceapp-env
