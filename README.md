@@ -1,49 +1,50 @@
 # Go E-Commerce Backend
 
 A modular monolithic e-commerce backend built with **Go**, designed for real-world production use.  
-The application supports authentication, product management, cart & orders, payments via Stripe, and is deployed on **AWS Elastic Beanstalk**.
+The application supports authentication, product management, cart & orders, payments via **Stripe**, and is deployed on **AWS Elastic Beanstalk**.
 
-🔗 Live Backend URL:  
+🔗 **Live Backend API**  
 http://go-ecommerce-app.ap-south-1.elasticbeanstalk.com/
 
-
-🔗 Live URL:  
+🔗 **Live link**  
 https://example-frontend-demo-link.com
 
-
+> A frontend page integrated with backend APIs and used for end-to-end testing.
 
 ---
 
 ## Features
 
-- User authentication & authorization (JWT based)
+- User authentication & authorization (JWT-based)
 - Product & category management
 - Cart and order management
 - Secure payment integration using **Stripe**
-- Modular monolithic architecture (clean separation of concerns)
+- Modular monolithic architecture with clear separation of concerns
 - RESTful APIs
 - Environment-based configuration
-- Production deployment on AWS Elastic Beanstalk
+- Production deployment on **AWS Elastic Beanstalk**
+- Automated CI/CD using **GitHub Actions**
 
 ---
 
 ## Architecture
 
-This project follows a **modular monolithic architecture**, where each domain is isolated into its own module while running as a single deployable unit.
+This project follows a **modular monolithic architecture**, where each domain is isolated into its own module while running as a single deployable service.
 
-**Core Modules**
+### Core Modules
 - Auth / Users
 - Products & Categories
 - Cart & Orders
 - Payments
 - Configuration & Middleware
 
-The architecture allows:
+### Design Benefits
 - Clear domain boundaries
-- Easy migration to microservices in the future
-- Simple deployment & scaling
+- Easier maintenance and testing
+- Straightforward migration path to microservices if needed
+- Simple deployment and scaling
 
-_(Architecture diagrams included in `/docs` folder)_
+(Architecture diagrams are included in the `/docs` directory.)
 
 ---
 
@@ -51,36 +52,49 @@ _(Architecture diagrams included in `/docs` folder)_
 
 ### Backend
 - **Go (Golang)**
-- **Fiber** (web framework)
+- **Fiber** (HTTP framework)
 - **GORM** (ORM)
 - **PostgreSQL**
 - **Stripe API** (payments)
-- **JWT** for authentication
+- **JWT** for authentication & authorization
 
 ### Infrastructure & DevOps
 - **AWS Elastic Beanstalk**
 - **EC2**
 - **RDS (PostgreSQL)**
 - **IAM**
-- **Environment variables for config**
-- **GitHub for version control**
+- **Docker**
+- **GitHub Actions** (CI/CD)
+- **GitHub** for version control
+
+---
+
+## CI/CD Pipeline (GitHub Actions)
+
+The project uses **GitHub Actions** to automate validation of code changes.
+
+### Pipeline Overview
+- Triggered on pull requests and pushes
+- Runs automated tests
+- Validates build before deployment
+- Ensures code quality and stability before merging
 
 ---
 
 ## Authentication Flow
 
 - Users authenticate via login/signup
-- JWT token is issued on successful login
-- Token is validated on protected routes using middleware
+- Backend issues a JWT on successful authentication
+- Protected routes are secured using middleware-based token validation
 
 ---
 
 ## Payment Flow (Stripe)
 
-1. User creates an order
+1. User initiates checkout from the client
 2. Backend creates a Stripe payment intent
 3. Client completes payment using Stripe Checkout
-4. Backend verifies payment status and updates order state
+4. Backend verifies payment via Stripe and updates order status
 
 ---
 
