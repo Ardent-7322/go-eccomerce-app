@@ -1,104 +1,147 @@
 # Go E-Commerce Backend
 
-A modular monolithic e-commerce backend built with **Go**, designed for real-world production use.  
-The application supports authentication, product management, cart & orders, payments via **Stripe**, and is deployed on **AWS Elastic Beanstalk**.
+## Overview
 
-🔗 **Live Backend API**  
+This is a personal learning project where I built a complete e-commerce backend in Go to understand how real-world backend systems are structured, deployed, and operated in production-like environments.
+
+The goal of this project was not just to expose APIs, but to work through the full lifecycle of a backend application — authentication, domain separation, payments, configuration management, deployment, and CI/CD — while keeping the architecture understandable and maintainable.
+
+Although the system is deployed and functional, the primary focus was learning solid backend engineering practices rather than building a commercial product.
+
+🔗 Live Backend API  
 http://go-ecommerce-app.ap-south-1.elasticbeanstalk.com/
 
-🔗 **Live link**  
+🔗 Sample Frontend (used for testing APIs end-to-end)  
 https://example-frontend-demo-link.com
-
-> A frontend page integrated with backend APIs and used for end-to-end testing.
 
 ---
 
-## Features
+## What This Backend Does
 
-- User authentication & authorization (JWT-based)
-- Product & category management
-- Cart and order management
-- Secure payment integration using **Stripe**
-- Modular monolithic architecture with clear separation of concerns
-- RESTful APIs
-- Environment-based configuration
-- Production deployment on **AWS Elastic Beanstalk**
-- Automated CI/CD using **GitHub Actions**
+- Handles user signup, login, and authentication using JWT
+- Manages products and categories
+- Supports cart creation and order placement
+- Integrates Stripe for secure online payments
+- Exposes RESTful APIs for frontend or client consumption
+- Uses environment-based configuration for different setups
+- Is deployed on AWS with automated CI/CD
+
+---
+
+## How It Works
+
+High-level flow:
+
+Client Request  
+→ API Gateway (Fiber HTTP server)  
+→ Domain Module (Auth / Products / Orders / Payments)  
+→ Database or External Service (PostgreSQL / Stripe)  
+→ JSON Response
+
+Key ideas:
+- Each domain is isolated into its own module
+- Business logic is kept separate from HTTP handlers
+- Middleware is used for authentication and request validation
+- Configuration is injected via environment variables
+- The application runs as a single deployable service
 
 ---
 
 ## Architecture
 
-This project follows a **modular monolithic architecture**, where each domain is isolated into its own module while running as a single deployable service.
+This project follows a **modular monolithic architecture**.
+
+Instead of splitting everything into microservices, I chose a modular monolith to:
+- Keep deployment and debugging simple
+- Maintain clear domain boundaries
+- Avoid unnecessary operational complexity
 
 ### Core Modules
-- Auth / Users
-- Products & Categories
-- Cart & Orders
-- Payments
-- Configuration & Middleware
 
-### Design Benefits
-- Clear domain boundaries
-- Easier maintenance and testing
-- Straightforward migration path to microservices if needed
-- Simple deployment and scaling
+- Auth / Users  
+- Products & Categories  
+- Cart & Orders  
+- Payments  
+- Configuration & Middleware  
 
-(Architecture diagrams are included in the `/docs` directory.)
+Each module owns its routes, services, and data access logic, while sharing common infrastructure like logging, configuration, and middleware.
+
+This structure also makes it easier to break modules into separate services in the future if required.
+
+---
+
+## Design Choices
+
+- I chose a modular monolith to focus on clean domain separation without microservice overhead
+- Fiber was selected for its simplicity and performance
+- GORM was used to speed up development and schema management
+- JWT-based authentication was implemented to understand stateless auth flows
+- Stripe was integrated to learn real payment workflows and webhooks
+- AWS Elastic Beanstalk was used to simplify deployment while still working with EC2 and RDS
 
 ---
 
 ## Tech Stack
 
 ### Backend
-- **Go (Golang)**
-- **Fiber** (HTTP framework)
-- **GORM** (ORM)
-- **PostgreSQL**
-- **Stripe API** (payments)
-- **JWT** for authentication & authorization
+- Go (Golang)
+- Fiber (HTTP framework)
+- GORM (ORM)
+- PostgreSQL
+- JWT for authentication
+- Stripe API for payments
 
 ### Infrastructure & DevOps
-- **AWS Elastic Beanstalk**
-- **EC2**
-- **RDS (PostgreSQL)**
-- **IAM**
-- **Docker**
-- **GitHub Actions** (CI/CD)
-- **GitHub** for version control
-
----
-
-## CI/CD Pipeline (GitHub Actions)
-
-The project uses **GitHub Actions** to automate validation of code changes.
-
-### Pipeline Overview
-- Triggered on pull requests and pushes
-- Runs automated tests
-- Validates build before deployment
-- Ensures code quality and stability before merging
+- AWS Elastic Beanstalk
+- EC2
+- RDS (PostgreSQL)
+- IAM
+- Docker
+- GitHub Actions for CI/CD
+- GitHub for version control
 
 ---
 
 ## Authentication Flow
 
-- Users authenticate via login/signup
-- Backend issues a JWT on successful authentication
-- Protected routes are secured using middleware-based token validation
+- Users register or log in via API
+- Backend validates credentials
+- A JWT is issued on successful authentication
+- Protected routes use middleware to validate tokens
+- Requests without valid tokens are rejected
+
+This helped me understand how stateless authentication works in real systems.
 
 ---
 
 ## Payment Flow (Stripe)
 
-1. User initiates checkout from the client
+1. Client initiates checkout
 2. Backend creates a Stripe payment intent
-3. Client completes payment using Stripe Checkout
-4. Backend verifies payment via Stripe and updates order status
+3. Client completes payment via Stripe Checkout
+4. Backend verifies payment status
+5. Order status is updated accordingly
+
+This part of the project was especially useful for understanding third-party integrations and handling asynchronous payment flows.
 
 ---
 
-## ⚙️ Environment Variables
+## CI/CD Pipeline
+
+The project uses GitHub Actions to automate basic checks.
+
+Pipeline steps:
+- Triggered on push and pull requests
+- Runs build and basic validation
+- Ensures the application can be built successfully before deployment
+
+This helped me understand how automated pipelines fit into real development workflows.
+
+---
+
+## Environment Configuration
+
+The application is configured entirely through environment variables.
 
 ```env
 APP_ENV=prod
