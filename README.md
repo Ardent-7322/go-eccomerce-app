@@ -145,7 +145,7 @@ The application is configured entirely through environment variables.
 
 ```env
 APP_ENV=prod
-SERVER_PORT=5000
+SERVER_PORT=9000
 APP_SECRET=*****
 DB_HOST=*****
 DB_PORT=5432
