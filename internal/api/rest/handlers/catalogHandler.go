@@ -35,7 +35,7 @@ func SetupCatalogRoutes(rh *rest.RestHandler) {
 	app.Get("/products", handler.GetProducts)
 	app.Get("/products/:id", handler.GetProduct)
 	app.Get("/categories", handler.GetCategories)
-	app.Get("/catagories/:id", handler.GetCategoriesById)
+	app.Get("/categories/:id", handler.GetCategoriesById)
 
 	// private
 	// manage product and categories
@@ -184,7 +184,7 @@ func (h CatalogHandler) UpdateStock(ctx *fiber.Ctx) error {
 		UserId: int(user.ID),
 	}
 	updatedProduct, err := h.svc.UpdatedProductStock(product)
-	return rest.SuccessResponse(ctx, "Product created successfully", updatedProduct)
+	return rest.SuccessResponse(ctx, "update stock", updatedProduct)
 
 }
 

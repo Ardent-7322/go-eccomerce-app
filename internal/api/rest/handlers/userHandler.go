@@ -45,7 +45,7 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	pvtRoutes.Post("/verify", handler.Verify)
 	pvtRoutes.Post("/profile", handler.CreateProfile)
 	pvtRoutes.Get("/profile", handler.GetProfile)
-	pvtRoutes.Get("/profile", handler.UpdateProfile)
+	pvtRoutes.Patch("/profile", handler.UpdateProfile)
 
 	pvtRoutes.Post("/cart", handler.AddtoCart)
 	pvtRoutes.Get("/cart", handler.GetCart)

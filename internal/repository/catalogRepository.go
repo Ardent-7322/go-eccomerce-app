@@ -30,8 +30,8 @@ type catalogRepository struct {
 func (c catalogRepository) CreateProduct(e *domain.Product) error {
 	err := c.db.Model(&domain.Product{}).Create(e).Error
 	if err != nil {
-		log.Printf("err: %v", err)
-		return errors.New("cannot create product")
+		log.Printf("CREATE PRODUCT ERROR: %v", err) // already hai
+		return err                                  //
 	}
 	return nil
 }
