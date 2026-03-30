@@ -1,6 +1,6 @@
 # Go Ecommerce Backend
 
-I built this to understand how a production backend actually comes together — not just writing APIs, but going through the full lifecycle: architecture decisions, authentication, payments, deployment, and CI/CD.
+I built this to understand how a production backend actually comes together - not just writing APIs, but going through the full lifecycle: architecture decisions, authentication, payments, deployment, and CI/CD.
 
 The backend is live on AWS. It handles real requests, connects to a managed PostgreSQL instance on RDS, and processes payments through Stripe.
 
@@ -19,7 +19,7 @@ The backend is live on AWS. It handles real requests, connects to a managed Post
 
 ## Architecture
 
-Modular monolith — not microservices. Each domain (auth, products, orders, payments) owns its routes, services, and data access logic, but they all run as one deployable unit.
+Modular monolith - not microservices. Each domain (auth, products, orders, payments) owns its routes, services, and data access logic, but they all run as one deployable unit.
 
 I picked this over microservices intentionally. For a project at this scale, splitting into services would add operational overhead without real benefit. The module boundaries are clean enough that breaking things apart later would be straightforward if needed.
 
@@ -44,7 +44,7 @@ Client Request
 
 ## Authentication
 
-Standard JWT flow — user logs in, gets a signed token, sends it on protected requests. Middleware validates the token and rejects anything invalid before it hits the handler. Passwords are hashed with bcrypt.
+Standard JWT flow - user logs in, gets a signed token, sends it on protected requests. Middleware validates the token and rejects anything invalid before it hits the handler. Passwords are hashed with bcrypt.
 
 Roles are checked at the middleware level so business logic stays clean.
 
@@ -62,7 +62,7 @@ The async nature of payment verification was the most interesting part to get ri
 
 ## CI/CD
 
-GitHub Actions runs on every push — builds the binary, runs checks, and blocks merges if the build fails. Deployment to Elastic Beanstalk is handled separately after passing CI.
+GitHub Actions runs on every push - builds the binary, runs checks, and blocks merges if the build fails. Deployment to Elastic Beanstalk is handled separately after passing CI.
 
 
 ## Running locally
