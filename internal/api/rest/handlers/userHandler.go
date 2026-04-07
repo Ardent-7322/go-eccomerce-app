@@ -69,6 +69,13 @@ func (h *UserHandler) Register(ctx *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("Signup error: %v\n", err) // <--- THIS IS IMPORTANT
 
+		if errors.Is(err, repository.ErrUserEmailAlreadyExists) {
+			return ctx.Status(http.StatusConflict).JSON(&fiber.Map{
+				"message": "email already registered, please login or use another email",
+				"error":   err.Error(),
+			})
+		}
+
 		return ctx.Status(http.StatusInternalServerError).JSON(&fiber.Map{
 			"message": "error on signup",
 			"error":   err.Error(), // add this for now to see real cause
@@ -155,7 +162,7 @@ func (h *UserHandler) CreateProfile(ctx *fiber.Ctx) error {
 		})
 	}
 
-	log.Printf("User &v", user)
+	log.Printf("User %v", user)
 
 	//create profile
 

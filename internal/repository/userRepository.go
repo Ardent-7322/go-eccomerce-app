@@ -3,12 +3,14 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go-ecommerce-app/internal/domain"
-	"log"
-
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"log"
 )
+
+var ErrUserEmailAlreadyExists = errors.New("user email already exists")
 
 type UserRepository interface {
 	CreateUser(usr domain.User) (domain.User, error)
@@ -158,7 +160,11 @@ func (r *userRepository) CreateUser(usr domain.User) (domain.User, error) {
 	err := r.db.Create(&usr).Error
 	if err != nil {
 		log.Printf("create user error %v", err)
-		// 👇 yahan generic error mat bhejo, real error wrap karo
+		//  yahan generic error mat bhejo, real error wrap karo
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.User{}, ErrUserEmailAlreadyExists
+		}
 		return domain.User{}, fmt.Errorf("failed to create user: %w", err)
 	}
 	return usr, nil
