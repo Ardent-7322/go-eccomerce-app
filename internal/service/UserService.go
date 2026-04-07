@@ -238,7 +238,7 @@ func (s UserService) BecomeSeller(id uint, input dto.SellerInput) (string, error
 	user, _ := s.UserRepo.FindUserById(id)
 
 	if user.UserType == domain.SELLER {
-		return "", errors.New("You are already a seller.")
+		return "", fmt.Errorf("user %d (%s) is already a seller", user.ID, user.Email)
 	}
 
 	// update user

@@ -298,6 +298,8 @@ func (h *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {
 
 	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
 		"message": "seller account created",
+		"user_id": user.ID,
+		"email":   user.Email,
 		"token":   token,
 	})
 }
