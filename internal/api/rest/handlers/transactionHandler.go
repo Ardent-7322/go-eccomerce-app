@@ -65,7 +65,11 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 	// 1. Check active payment
 	activePayment, err := h.Svc.GetActivePayment(user.ID)
 	if err != nil {
-		return rest.InternalError(ctx, err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			activePayment = nil
+		} else {
+			return rest.InternalError(ctx, err)
+		}
 	}
 	if activePayment != nil && activePayment.ID > 0 {
 		return ctx.Status(http.StatusOK).JSON(&fiber.Map{
@@ -80,6 +84,12 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
+		})
+	}
+
+	if amount <= 0 {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": "cart is empty",
 		})
 	}
 
@@ -124,7 +134,13 @@ func (h *TransactionHandler) VerifyPayment(ctx *fiber.Ctx) error {
 
 	// do we have active payment session to verify?
 	activePayment, err := h.Svc.GetActivePayment(user.ID)
-	if err != nil || activePayment.ID == 0 {
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ctx.Status(400).JSON(errors.New("no active payment exist"))
+		}
+		return rest.InternalError(ctx, err)
+	}
+	if activePayment == nil || activePayment.ID == 0 {
 		return ctx.Status(400).JSON(errors.New("no active payment exist"))
 	}
 
