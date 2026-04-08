@@ -49,6 +49,7 @@ func SetupTransactionRoutes(as *rest.RestHandler) {
 
 	secRoute := app.Group("/buyer", as.Auth.Authorize)
 	secRoute.Get("/payment", handler.MakePayment)
+	secRoute.Post("/verify", handler.VerifyPayment)
 	secRoute.Get("/verify", handler.VerifyPayment)
 
 	sellerRoute := app.Group("/seller", as.Auth.AuthorizeSeller)
@@ -63,7 +64,10 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 
 	// 1. Check active payment
 	activePayment, err := h.Svc.GetActivePayment(user.ID)
-	if activePayment.ID > 0 {
+	if err != nil {
+		return rest.InternalError(ctx, err)
+	}
+	if activePayment != nil && activePayment.ID > 0 {
 		return ctx.Status(http.StatusOK).JSON(&fiber.Map{
 			"message": "create payment",
 			"pubKey":  pubKey,
@@ -73,6 +77,11 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 
 	// 2. Get cart total
 	_, amount, err := h.UserSvc.FindCart(user.ID)
+	if err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
 	// 3. Generate order reference
 	orderId, err := helper.RandomHandler(8)
@@ -82,6 +91,12 @@ func (h *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 
 	// 4. Create a new payment session on stripe
 	paymentResult, err := h.PaymentClient.CreatePayment(amount, user.ID, orderId)
+	if err != nil {
+		return rest.InternalError(ctx, err)
+	}
+	if paymentResult == nil {
+		return rest.InternalError(ctx, errors.New("payment provider returned empty response"))
+	}
 
 	//5. Store payment session in db to create to store payment info
 	err = h.Svc.StoreCreatedPayment(dto.CreatePaymentRequest{
@@ -115,6 +130,12 @@ func (h *TransactionHandler) VerifyPayment(ctx *fiber.Ctx) error {
 
 	// fetch payment status from stripe
 	paymentRes, err := h.PaymentClient.GetPaymentStatus(activePayment.PaymentId)
+	if err != nil {
+		return rest.InternalError(ctx, err)
+	}
+	if paymentRes == nil {
+		return rest.InternalError(ctx, errors.New("payment provider returned empty status"))
+	}
 	PaymentJson, _ := json.Marshal(paymentRes)
 	paymentLogs := string(PaymentJson)
 	paymentStatus := "failed"
