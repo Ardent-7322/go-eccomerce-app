@@ -19,6 +19,7 @@ The backend is live on AWS. It handles real requests, connects to a managed Post
 
 ## Architecture
 
+![images](./images/ecommerce_system_architecture.svg)
 Modular monolith - not microservices. Each domain (auth, products, orders, payments) owns its routes, services, and data access logic, but they all run as one deployable unit.
 
 I picked this over microservices intentionally. For a project at this scale, splitting into services would add operational overhead without real benefit. The module boundaries are clean enough that breaking things apart later would be straightforward if needed.
